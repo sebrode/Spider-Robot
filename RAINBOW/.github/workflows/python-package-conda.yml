@@ -1,0 +1,46 @@
+# Inspired by:
+# https://autobencoder.com/2020-08-24-conda-actions/
+name: Testing your commit on RAINBOW
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  miniconda:
+    name: os ${{ matrix.os }} python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+            os: ["ubuntu-latest", "windows-latest", "macos-latest"]
+            python-version: ["3.9"]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: test
+          python-version: ${{ matrix.python-version }}
+          auto-activate-base: false
+      - name: Run Test and Coverage
+        shell: bash -l {0}
+        run: |
+            conda install numpy
+            conda install scipy
+            conda install -c conda-forge matplotlib
+            conda install -c conda-forge igl
+            conda install coverage
+            conda install pyparsing
+            conda install -c anaconda ipython_genutils 
+            conda install -c conda-forge meshplot
+            conda install numba=0.58.1
+            conda install -c anaconda networkx
+            pip install usd-core
+            coverage run  -m unittest python/unit_tests/test_*.py
+            coverage report
+      - name: Format the code
+        shell: bash -l {0}
+        run: |
+          conda install --name test black -y
+          black python/rainbow
+
