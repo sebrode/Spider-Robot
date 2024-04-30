@@ -1,0 +1,7 @@
+Tue Mar 12 13:51:06 2024: Moved to 90.0 degrees
+Tue Mar 12 13:51:09 2024: Moved to 50.0 degrees
+Tue Mar 12 13:51:13 2024: Moved to 120.0 degrees
+Tue Mar 12 13:52:48 2024: Servo relaxed
+Tue Mar 12 13:53:13 2024: Moved to 90.0 degrees
+Tue Mar 12 13:53:16 2024: Moved to 120.0 degrees
+Tue Mar 12 14:08:42 2024: All servos relaxed
