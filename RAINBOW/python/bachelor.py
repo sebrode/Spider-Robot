@@ -4,7 +4,11 @@ import os
 import sys
 import numpy as np
 
+from scipy.optimize import minimize
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+#
 
 
 def show_simple_setup():
@@ -19,22 +23,89 @@ def show_simple_setup():
         0), beta=0.0, gamma=0.0, tx=82.0, ty=30.0, tz=16.5)
     IK.update_skeleton(skeleton)
     chains = IK.make_chains(skeleton)
-    # print(skeleton)
-    print(chains[0])
-    # print("TEST")
+
+    def compute_jac(x, chains, skeleton):
+        IK.set_joint_angles(skeleton, x)
+        IK.update_skeleton(skeleton)
+        return IK.compute_jacobian(chains, skeleton)
+
+    def compute_hess(x, chains, skeleton):
+        IK.set_joint_angles(skeleton, x)
+        IK.update_skeleton(skeleton)
+        return IK.compute_hessian(chains, skeleton, compute_jac(x, chains, skeleton))
+
+    def compute_grad(x, chains, skeleton):
+        IK.set_joint_angles(skeleton, x)
+        IK.update_skeleton(skeleton)
+        return IK.compute_gradient(
+            chains, skeleton, compute_jac(x, chains, skeleton))
+
+    def compute_obj(x, chains, skeleton):
+        IK.set_joint_angles(skeleton, x)
+        IK.update_skeleton(skeleton)
+        return IK.compute_objective(chains, skeleton)
+
     IK.set_angle(B3.idx, 90, skeleton)
-    IK.update_skeleton(skeleton)
-    print(IK.get_joint_angles(skeleton))
-    jacobian = IK.compute_jacobian(chains, skeleton)
-    print(jacobian)
-    hessian = IK.compute_hessian(chains, skeleton, jacobian)
-    print(hessian)
-    # print(len(hessian))
-    gradient = IK.compute_gradient(chains, skeleton, jacobian)
-    print(gradient)
-    objective = IK.compute_objective(chains, skeleton)
-    print(objective)
-    # end_effector = IK.get_end_effector(chains, skeleton)
+    # print(IK.get_joint_angles(skeleton))
+    result = minimize(
+        fun=compute_obj,
+        x0=IK.get_joint_angles(skeleton),
+        method='Newton-CG',
+        jac=compute_grad,
+        hess=compute_hess,
+        args=(chains, skeleton)
+    )
+
+    # print("Optimal solution:", result.x)
+    # print("Optimal value:", result.fun)
+
+    def constraint_1(x):
+        return [x[1]-x[2], x[5], x[8]]
+
+    footMovementMatrix = np.matrix([
+        [0.,  0.,  0., 60.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+        [0.,  0.,  0., 90.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+        [0.,  0.,  0., 120.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]
+    ])
+
+    def simulateSpider(movementMatrix):
+        totalAngleMatrix = np.zeros(
+            (len(IK.get_joint_angles(skeleton)), len(movementMatrix)))
+        totalObjectMatrix = np.zeros(
+            (len(movementMatrix), 1))
+
+        for i in range(len(movementMatrix)):
+            IK.set_joint_angles(skeleton, movementMatrix[i, :].T)
+            result = minimize(
+                fun=compute_obj,
+                x0=IK.get_joint_angles(skeleton),
+                # method='SLSQP',
+                method='Newton-CG',
+                jac=compute_grad,
+                hess=compute_hess,
+                args=(chains, skeleton),
+                # constraints={'type': 'eq', 'fun': constraint_1}
+            )
+            totalAngleMatrix[:, i] = result.x
+            totalObjectMatrix[i, :] = result.fun
+
+            # print("Optimal solution:", result.x)
+            # print("Optimal value:", result.fun)
+        return totalAngleMatrix, totalObjectMatrix
+
+    angleMatrix, objectMatrix = simulateSpider(footMovementMatrix)
+    print(angleMatrix)
+    print(objectMatrix)
+
+    # jacobian = IK.compute_jacobian(chains, skeleton)
+    # print("Jacobian:\n", jacobian)
+    # hessian = IK.compute_hessian(chains, skeleton, jacobian)
+    # print("\nHessian:", hessian)
+    # gradient = IK.compute_gradient(chains, skeleton, jacobian)
+    # print("Gradient:", gradient)
+    # objective = IK.compute_objective(chains, skeleton)
+    # print("Objective: ", objective)
+    # end_effector = IK.get_end_effector(chains[0], skeleton)
     # print(end_effector)
 
 
