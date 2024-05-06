@@ -60,22 +60,24 @@ def show_simple_setup():
     # print("Optimal value:", result.fun)
 
     def constraint_1(x):
-        return [x[1]-x[2], x[5], x[8]]
+        return [x[2], x[5], x[8]]
 
-    footMovementMatrix = np.matrix([
-        [0.,  0.,  0., 60.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-        [0.,  0.,  0., 90.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-        [0.,  0.,  0., 120.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]
+    footPositionMatrix = np.array([
+        V3.make(20, 0, 0),
+        V3.make(25, 5, 0),
+        V3.make(30, 0, 0)
     ])
 
-    def simulateSpider(movementMatrix):
+    def simulateSpider(positionMatrix):
         totalAngleMatrix = np.zeros(
-            (len(IK.get_joint_angles(skeleton)), len(movementMatrix)))
+            (len(IK.get_joint_angles(skeleton)), len(positionMatrix)))
         totalObjectMatrix = np.zeros(
-            (len(movementMatrix), 1))
+            (len(positionMatrix), 1))
 
-        for i in range(len(movementMatrix)):
-            IK.set_joint_angles(skeleton, movementMatrix[i, :].T)
+        for i in range(len(positionMatrix)):
+            # IK.set_joint_angles(skeleton, positionMatrix[i, :].T)
+            chains[0].goal = positionMatrix[i].T
+            IK.update_skeleton(skeleton)
             result = minimize(
                 fun=compute_obj,
                 x0=IK.get_joint_angles(skeleton),
@@ -93,7 +95,7 @@ def show_simple_setup():
             # print("Optimal value:", result.fun)
         return totalAngleMatrix, totalObjectMatrix
 
-    angleMatrix, objectMatrix = simulateSpider(footMovementMatrix)
+    angleMatrix, objectMatrix = simulateSpider(footPositionMatrix)
     print(angleMatrix)
     print(objectMatrix)
 
