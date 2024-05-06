@@ -552,4 +552,3 @@ def compute_finite_difference_hessian(chains, skeleton, h=0.1):
         for j in range(N):
             H[i, j] = __numerical_differentiation_second_derivative(chains, skeleton, i, j, h)
     return H
-

@@ -2,8 +2,14 @@ from flask import Flask, render_template_string, redirect, request   # Importing
 import RPi.GPIO as GPIO     # Importing the GPIO library to control GPIO pins of Raspberry Pi
 from time import sleep      # Import sleep module from time library to add delays
 from adafruit_servokit import ServoKit
+import numpy as np
 
 kit = ServoKit(channels=16)
+leg0 = [0, 1, 2]
+leg1 = [4, 5, 6]
+leg2 = [8, 9, 10]
+leg3 = [12, 13, 14]
+legs = [leg0, leg1, leg2, leg3]
 
 def init():
     for i in range(16):
@@ -29,6 +35,18 @@ TPL = '''
         <form method="POST" action="test">
 <p>Slider 1 <input type="range" min="1" max="180" name="slider1" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output1">90</output></p>
 <p>Slider 2 <input type="range" min="1" max="180" name="slider2" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
+            <input type="submit" value="submit" />
+        </form>
+        <h1>IK Matrix</h1>
+        <form method="POST" action="ik">
+            <textarea id="ik_matrix" name="ik_matrix" rows="4" cols="50">
+            <input type="number" id="ik_step_time" name="ik_step_time">
+            <select name="ik_leg" id="ik_leg">
+              <option value="0">Grey Leg</option>
+              <option value="1">Black Leg</option>
+              <option value="2">Red Leg</option>
+              <option value="3">Blue Leg</option>
+            </select>
             <input type="submit" value="submit" />
         </form>
         <h1>Movement</h1>
@@ -74,7 +92,22 @@ TPL = '''
 @app.route("/")
 def home():
     return render_template_string(TPL)
- 
+
+@app.route("/ik")
+def ik():
+    ik_matrix = np.array(request.form["ik_matrix"])
+    ik_step_time = request.form["ik_step_time"]
+    ik_leg = request.form["ik_leg"]
+
+    leg = legs[ik_leg]
+    offset = 3
+
+    for i in range(ik_matrix.shape[1]):
+        for j in range(len(leg)):
+          SetAngle(ik_matrix[j*offset, i], int(leg[j]))
+        sleep(ik_step_time)
+    return redirect("/")
+
 @app.route("/test", methods=["POST"])
 def test():
     # Get slider Values
