@@ -46,28 +46,26 @@ def show_simple_setup():
 
     #IK.set_angle(B3.idx, 90, skeleton)
     # print(IK.get_joint_angles(skeleton))
-    result = minimize(
-        fun=compute_obj,
-        x0=IK.get_joint_angles(skeleton),
-        method='Newton-CG',
-        jac=compute_grad,
-        hess=compute_hess,
-        args=(chains, skeleton)
-    )
+    # result = minimize(
+    #     fun=compute_obj,
+    #     x0=IK.get_joint_angles(skeleton),
+    #     method='Newton-CG',
+    #     jac=compute_grad,
+    #     hess=compute_hess,
+    #     args=(chains, skeleton)
+    # )
 
     # print("Optimal solution:", result.x)
     # print("Optimal value:", result.fun)
 
-    def constraint_1(x):
-        return [x[2], x[5], x[8]]
+    # def constraint_1(x):
+    #     return [x[2], x[5], x[8]]
 
     footPositionMatrix = np.array([
         V3.make(100, 100, 100),
         V3.make(25, 5, 0),
         V3.make(30, 0, 0)
     ])
-
-
 
     def simulateSpider(positionMatrix):
         totalAngleMatrix = np.zeros(
@@ -97,8 +95,10 @@ def show_simple_setup():
         return totalAngleMatrix, totalObjectMatrix
 
     angleMatrix, objectMatrix = simulateSpider(footPositionMatrix)
-    print(angleMatrix)
-    print(objectMatrix)
+    # print(angleMatrix)
+    # print(objectMatrix)
+    print(np.array2string(angleMatrix, separator=', '))
+    print(np.array2string(objectMatrix, separator=', '))
 
     # jacobian = IK.compute_jacobian(chains, skeleton)
     # print("Jacobian:\n", jacobian)

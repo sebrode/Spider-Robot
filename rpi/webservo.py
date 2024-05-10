@@ -1,5 +1,4 @@
 from flask import Flask, render_template_string, redirect, request   # Importing the Flask modules required for this project
-import RPi.GPIO as GPIO     # Importing the GPIO library to control GPIO pins of Raspberry Pi
 from time import sleep      # Import sleep module from time library to add delays
 from adafruit_servokit import ServoKit
 import numpy as np
