@@ -13,7 +13,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def show_simple_setup():
     skeleton = IK.create_skeleton()
-    B0 = IK.create_root(skeleton, alpha=IK.degrees_to_radians(0), beta=0.0, gamma=0.0, tx=26.8, ty=19.2, tz=28.5)
+    B0 = IK.create_root(skeleton, alpha=IK.degrees_to_radians(
+        0), beta=0.0, gamma=0.0, tx=26.8, ty=19.2, tz=28.5)
     B1 = IK.add_bone(skeleton, parent_idx=B0.idx, alpha=IK.degrees_to_radians(
         0), beta=0.0, gamma=0.0, tx=78.0, ty=30.0, tz=40.5)
     B2 = IK.add_bone(skeleton, parent_idx=B1.idx, alpha=IK.degrees_to_radians(
@@ -44,8 +45,14 @@ def show_simple_setup():
         IK.update_skeleton(skeleton)
         return IK.compute_objective(chains, skeleton)
 
-    #IK.set_angle(B3.idx, 90, skeleton)
-    # print(IK.get_joint_angles(skeleton))
+    IK.set_angle(B0.idx, 90, skeleton)
+    IK.set_angle(B1.idx, 90, skeleton)
+    IK.set_angle(B2.idx, 90, skeleton)
+    IK.update_skeleton(skeleton)
+    print(chains[0].goal)
+    print(B0.__str__())
+    print(B1.__str__())
+    print(B2.__str__())
     result = minimize(
         fun=compute_obj,
         x0=IK.get_joint_angles(skeleton),
@@ -62,12 +69,10 @@ def show_simple_setup():
         return [x[2], x[5], x[8]]
 
     footPositionMatrix = np.array([
-        V3.make(100, 100, 100),
-        V3.make(25, 5, 0),
-        V3.make(30, 0, 0)
+        V3.make(26.8, 39.2, 208.5),
+        V3.make(78, 30, 40.5),
+        V3.make(83, 41.466, 10)
     ])
-
-
 
     def simulateSpider(positionMatrix):
         totalAngleMatrix = np.zeros(
