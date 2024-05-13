@@ -14,13 +14,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def show_simple_setup():
     skeleton = IK.create_skeleton()
     B0 = IK.create_root(skeleton, alpha=IK.degrees_to_radians(
-        0), beta=0.0, gamma=0.0, tx=26.8, ty=19.2, tz=28.5)
+        0), beta=0.0, gamma=0.0, tx=0.0, ty=0.0, tz=0.0)
     B1 = IK.add_bone(skeleton, parent_idx=B0.idx, alpha=IK.degrees_to_radians(
-        0), beta=0.0, gamma=0.0, tx=78.0, ty=30.0, tz=40.5)
+        0), beta=0.0, gamma=0.0, tx=47, ty=0.0, tz=0.0)
     B2 = IK.add_bone(skeleton, parent_idx=B1.idx, alpha=IK.degrees_to_radians(
-        0), beta=0.0, gamma=0.0, tx=83.0, ty=41.466, tz=10.0)
+        0), beta=0.0, gamma=0.0, tx=66.4, ty=0.0, tz=0.0)
     B3 = IK.add_bone(skeleton, parent_idx=B2.idx, alpha=IK.degrees_to_radians(
-        0), beta=0.0, gamma=0.0, tx=82.0, ty=30.0, tz=16.5)
+        0), beta=0.0, gamma=0.0, tx=126.530, ty=0.0, tz=0.0)
     IK.update_skeleton(skeleton)
     chains = IK.make_chains(skeleton)
 
@@ -45,33 +45,27 @@ def show_simple_setup():
         IK.update_skeleton(skeleton)
         return IK.compute_objective(chains, skeleton)
 
-    IK.set_angle(B0.idx, 90, skeleton)
-    IK.set_angle(B1.idx, 90, skeleton)
-    IK.set_angle(B2.idx, 90, skeleton)
-    IK.update_skeleton(skeleton)
-    print(chains[0].goal)
-    print(B0.__str__())
-    print(B1.__str__())
-    print(B2.__str__())
-    result = minimize(
-        fun=compute_obj,
-        x0=IK.get_joint_angles(skeleton),
-        method='Newton-CG',
-        jac=compute_grad,
-        hess=compute_hess,
-        args=(chains, skeleton)
-    )
+    # IK.set_angle(B3.idx, 90, skeleton)
+    # print(IK.get_joint_angles(skeleton))
+    # result = minimize(
+    #     fun=compute_obj,
+    #     x0=IK.get_joint_angles(skeleton),
+    #     method='Newton-CG',
+    #     jac=compute_grad,
+    #     hess=compute_hess,
+    #     args=(chains, skeleton)
+    # )
 
     # print("Optimal solution:", result.x)
     # print("Optimal value:", result.fun)
 
     def constraint_1(x):
-        return [x[2], x[5], x[8]]
+        return [x[0], x[2], x[4], x[5], x[7], x[8]]
 
     footPositionMatrix = np.array([
-        V3.make(26.8, 39.2, 208.5),
-        V3.make(78, 30, 40.5),
-        V3.make(83, 41.466, 10)
+        V3.make(80, -185, 0),
+        V3.make(180, -150, 0),
+        V3.make(80, -185, 0)
     ])
 
     def simulateSpider(positionMatrix):
@@ -90,7 +84,7 @@ def show_simple_setup():
                 # method='SLSQP',
                 method='Newton-CG',
                 jac=compute_grad,
-                hess=compute_hess,
+                # hess=compute_hess,
                 args=(chains, skeleton),
                 # constraints={'type': 'eq', 'fun': constraint_1}
             )
@@ -102,8 +96,10 @@ def show_simple_setup():
         return totalAngleMatrix, totalObjectMatrix
 
     angleMatrix, objectMatrix = simulateSpider(footPositionMatrix)
-    print(angleMatrix)
-    print(objectMatrix)
+    # print(angleMatrix)
+    # print(objectMatrix)
+    print(np.array2string(angleMatrix, separator=', '))
+    print(np.array2string(objectMatrix, separator=', '))
 
     # jacobian = IK.compute_jacobian(chains, skeleton)
     # print("Jacobian:\n", jacobian)
