@@ -3,6 +3,8 @@ import rainbow.simulators.inverse_kinematics.api as IK
 import os
 import sys
 import numpy as np
+import polyscope as ps
+import rainbow.simulators.inverse_kinematics.visualizer as GP
 
 from scipy.optimize import minimize
 
@@ -13,13 +15,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def show_simple_setup():
     skeleton = IK.create_skeleton()
-    B0 = IK.create_root(skeleton, alpha=IK.degrees_to_radians(0), beta=0.0, gamma=0.0, tx=26.8, ty=19.2, tz=28.5)
-    B1 = IK.add_bone(skeleton, parent_idx=B0.idx, alpha=IK.degrees_to_radians(
-        0), beta=0.0, gamma=0.0, tx=78.0, ty=30.0, tz=40.5)
-    B2 = IK.add_bone(skeleton, parent_idx=B1.idx, alpha=IK.degrees_to_radians(
-        0), beta=0.0, gamma=0.0, tx=83.0, ty=41.466, tz=10.0)
-    B3 = IK.add_bone(skeleton, parent_idx=B2.idx, alpha=IK.degrees_to_radians(
-        0), beta=0.0, gamma=0.0, tx=82.0, ty=30.0, tz=16.5)
+    B0 = IK.create_root(skeleton, alpha=IK.degrees_to_radians(0.0), beta=0.0, gamma=0.0, tx=0.0, ty=0.0, tz=0.0)
+    B1 = IK.add_bone(skeleton, parent_idx=B0.idx, alpha=0.0, beta=0.0, gamma=0.0, tx=4.7, ty=0, tz=0.0)
+    B2 = IK.add_bone(skeleton, parent_idx=B1.idx, alpha=0.0, beta=0.0, gamma=0.0, tx=6.64, ty=0, tz=0.0)
+    B3 = IK.add_bone(skeleton, parent_idx=B2.idx, alpha=0.0, beta=0.0, gamma=0.0, tx=12.653, ty=0, tz=0.0)
+    
     IK.update_skeleton(skeleton)
     chains = IK.make_chains(skeleton)
 
@@ -62,9 +62,9 @@ def show_simple_setup():
     #     return [x[2], x[5], x[8]]
 
     footPositionMatrix = np.array([
-        V3.make(100, 100, 100),
-        V3.make(25, 5, 0),
-        V3.make(30, 0, 0)
+        V3.make(0, 0, 0),
+        V3.make(0, 0, 0),
+        V3.make(0, 0, 0)
     ])
 
     def simulateSpider(positionMatrix):
@@ -112,5 +112,16 @@ def show_simple_setup():
     # print(end_effector)
 
 
+    S = GP.GraphicsComponent()
+    S.generateSkeletonMesh(skeleton, chains)
+    
+
+        
+    IK.solveVariables(chains, skeleton, 1000, 0.38, 0.0001, 0.05, 0.21, 0.0001)
+    
+    S.update_mesh(skeleton, chains)
+    S.visualize()
+
 if __name__ == '__main__':
+    ps.init()
     show_simple_setup()
