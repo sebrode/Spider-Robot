@@ -14,10 +14,10 @@ leg0 = [0, 1, 2]
 leg1 = [4, 5, 6]
 leg2 = [8, 9, 10]
 leg3 = [12, 13, 14]
-legs = [leg0, leg1, leg2, leg3]
+legs = [leg0, leg1, leg2, leg3, [leg0, leg1, leg2, leg3]]
 
 
-def reset():
+def initialize_servos():
     for i in range(16):
         kit.servo[i].set_pulse_width_range(530, 2470)
         if i in [0, 12]:
@@ -28,7 +28,7 @@ def reset():
             kit.servo[i].angle = 90
 
 
-reset()
+initialize_servos()
 
 
 def SetAngle(num, ang):
@@ -51,15 +51,29 @@ TPL = '''
             <input type="submit" value="Reset all servos" />
         </form>
         <form method="POST" action="test">
-<p>Slider 1 <input type="range" min="1" max="180" name="slider1" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output1">90</output></p>
-<p>Slider 2 <input type="range" min="1" max="180" name="slider2" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
-<p>Slider 3 <input type="range" min="1" max="180" name="slider3" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
+        <select name="selected_leg">
+                <option value="0">Grey Leg</option>
+                <option value="1">Black Leg</option>
+                <option value="2" selected>Red Leg</option>
+                <option value="3">Blue Leg</option>
+            </select>
+
+        <p>Slider 1 <input type="range" min="1" max="180" name="slider1" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output1">90</output></p>
+        <p>Slider 2 <input type="range" min="1" max="180" name="slider2" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
+        <p>Slider 3 <input type="range" min="1" max="180" name="slider3" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
+                    <input type="submit" value="submit" />
+        </form>
+        <h1>IK Matrix All Legs</h1>
+        <form method="POST" action="ik">
+            <textarea id="ik_matrix_front" placeholder="Front Legs" name="ik_matrix_front" rows="10" cols="50"></textarea>
+            <textarea id="ik_matrix_back" placeholder="Back Legs" name="ik_matrix_back" rows="10" cols="50"></textarea>
+            <input type="number" id="ik_step_time" name="ik_step_time" value="2" min="0" max="10" step="0.1">
             <input type="submit" value="submit" />
         </form>
-        <h1>IK Matrix</h1>
-        <form method="POST" action="ik">
+        <h1>IK Matrix Single Leg</h1>
+        <form method="POST" action="iktest">
             <textarea id="ik_matrix" name="ik_matrix" rows="10" cols="50"></textarea>
-            <input type="number" id="ik_step_time" name="ik_step_time" value="1" min="0" max="10" step="0.1">
+            <input type="number" id="ik_step_time" name="ik_step_time" value="2" min="0" max="10" step="0.1">
             <select name="ik_leg" id="ik_leg">
               <option value="0">Grey Leg</option>
               <option value="1">Black Leg</option>
@@ -117,43 +131,85 @@ def home():
 
 @app.route("/reset", methods=["POST"])
 def reset():
-    reset()
+    initialize_servos()
     return render_template_string(TPL)
 
 
-@app.route("/ik", methods=["POST"])
-def ik():
+@app.route("/iktest", methods=["POST"])
+def iktest():
     ik_matrix = request.form["ik_matrix"]
     ik_step_time = request.form["ik_step_time"]
     ik_leg = request.form["ik_leg"]
-
     leg = legs[int(ik_leg)]
     matrix = np.array(eval(ik_matrix))
     step_time = float(ik_step_time)
-    offset = 3
 
-    print("PUHAda", matrix)
-    for i in range(matrix.shape[1]):
-        for j in range(len(matrix[i])):
-            angle = matrix[j*offset, i]
-            degAngle = math.degrees(angle)
-            editedAngle = degAngle+90
-            print("ANGLE:", degAngle)
-            SetAngle(int(leg[j]), editedAngle)
+    for i in range(matrix.shape[0]):
+        angle1 = 90
+        angle2 = 90-math.degrees(matrix[i][1])
+        angle3 = 45-math.degrees(matrix[i][2])
+        SetAngle(int(leg[0]), angle1)
+        SetAngle(int(leg[1]), angle2)
+        SetAngle(int(leg[2]), angle3)
         sleep(step_time)
         print("slept:", step_time)
     return redirect("/")
 
 
+@app.route("/ik", methods=["POST"])
+def ik():
+    ik_matrix_front = request.form["ik_matrix_front"]
+    ik_matrix_back = request.form["ik_matrix_back"]
+    ik_step_time = request.form["ik_step_time"]
+    allLegs = [legs[0], legs[1], legs[2], legs[3]]
+    matrix_front = np.array(eval(ik_matrix_front)).T
+    matrix_back = np.array(eval(ik_matrix_back)).T
+    step_time = float(ik_step_time)
+    for i in range(matrix_front.shape[0]):
+        angle1 = 90
+        angle2 = 90-math.degrees(matrix_front[i][1])
+        angle3 = 45-math.degrees(matrix_front[i][2])
+        print(matrix_front[i][1])
+        print(matrix_front[(matrix_front.shape[0]-1)-i][1])
+
+        backAngle2 = 90-math.degrees(matrix_back[i][1])
+        backAngle3 = 45-math.degrees(matrix_back[i][2])
+
+        print(angle2)
+        print(backAngle2)
+        SetAngle(int(allLegs[0][0]), angle1)
+        SetAngle(int(allLegs[0][1]), angle2)
+        SetAngle(int(allLegs[0][2]), angle3)
+        SetAngle(int(allLegs[2][0]), angle1)
+        SetAngle(int(allLegs[2][1]), angle2)
+        SetAngle(int(allLegs[2][2]), angle3)
+
+        SetAngle(int(allLegs[1][0]), angle1)
+        SetAngle(int(allLegs[1][1]), backAngle2)
+        SetAngle(int(allLegs[1][2]), backAngle3)
+        SetAngle(int(allLegs[3][0]), angle1)
+        SetAngle(int(allLegs[3][1]), backAngle2)
+        SetAngle(int(allLegs[3][2]), backAngle3)
+        sleep(step_time)
+    return redirect("/")
+
+
 @app.route("/test", methods=["POST"])
 def test():
-    # Get slider Values
-    slider1 = request.form["slider1"]
-    slider2 = request.form["slider2"]
-    slider3 = request.form["slider3"]
-    SetAngle(0, int(slider1))
-    SetAngle(1, int(slider2))
-    SetAngle(2, int(slider3))
+    # Get selected leg index from the form
+    selected_leg_index = int(request.form["selected_leg"])
+    leg = legs[selected_leg_index]  # Get the servo IDs for the selected leg
+
+    # Get slider values
+    slider1 = int(request.form["slider1"])
+    slider2 = int(request.form["slider2"])
+    slider3 = int(request.form["slider3"])
+
+    # Set angles for the selected leg's servos
+    SetAngle(leg[0], slider1)
+    SetAngle(leg[1], slider2)
+    SetAngle(leg[2], slider3)
+
     # Change duty cycle
     return redirect("/")
 

@@ -31,15 +31,13 @@ def create_skeleton():
     return S
 
 
-def create_root(skeleton, alpha, beta, gamma, tx, ty, tz, euler_code='ZYZ'):
+def create_root(skeleton, alpha, tx, ty, tz, euler_code='ZYZ'):
     """
     This function creates a root bone in an empty skeleton. It should be the first function to use
     when populating a skeleton with bones. A skeleton can only have one root bone.
 
     :param skeleton:      The skeleton where to create the root bone.
     :param alpha:         The alpha Euler angle of the joint that is represented by this bone.
-    :param beta:          The beta Euler angle of the joint that is represented by this bone
-    :param gamma:         The gamma Euler angle of the joint that is represented by this bone
     :param tx:            The x-component of the bone vector.
     :param ty:            The y-component of the bone vector.
     :param tz:            The z-component of the bone vector.
@@ -48,20 +46,20 @@ def create_root(skeleton, alpha, beta, gamma, tx, ty, tz, euler_code='ZYZ'):
     :return:              A reference to the root bone that was created.
     """
     if skeleton.has_root():
-        raise RuntimeError('create_root(): Internal error, root already existed')
+        raise RuntimeError(
+            'create_root(): Internal error, root already existed')
     if not __is_valid_euler_code(euler_code):
-        raise RuntimeError('create_root(): Internal error, invalid Euler angle code given')
+        raise RuntimeError(
+            'create_root(): Internal error, invalid Euler angle code given')
     root = Bone()
     root.t = V3.make(tx, ty, tz)
     root.alpha = alpha
-    root.beta = beta
-    root.gamma = gamma
     root.euler_code = euler_code
     skeleton.bones.append(root)
     return root
 
 
-def add_bone(skeleton, parent_idx, alpha, beta, gamma, tx, ty, tz, euler_code='ZYZ'):
+def add_bone(skeleton, parent_idx, alpha, tx, ty, tz, euler_code='ZYZ'):
     """
     This function creates a new bone in a skeleton. It needs the index of an existing parent bone to know where to
     create the new bone.
@@ -69,8 +67,6 @@ def add_bone(skeleton, parent_idx, alpha, beta, gamma, tx, ty, tz, euler_code='Z
     :param skeleton:      The skeleton where to create the new bone into.
     :param parent_idx:    The index of the parent bone.
     :param alpha:         The alpha Euler angle of the joint that is represented by this bone.
-    :param beta:          The beta Euler angle of the joint that is represented by this bone
-    :param gamma:         The gamma Euler angle of the joint that is represented by this bone
     :param tx:            The x-component of the bone vector.
     :param ty:            The y-component of the bone vector.
     :param tz:            The z-component of the bone vector.
@@ -81,15 +77,14 @@ def add_bone(skeleton, parent_idx, alpha, beta, gamma, tx, ty, tz, euler_code='Z
     if not skeleton.has_bone(parent_idx):
         raise RuntimeError('add_bone(): Internal error, parent did not exist')
     if not __is_valid_euler_code(euler_code):
-        raise RuntimeError('create_root(): Internal error, invalid Euler angle code given')
+        raise RuntimeError(
+            'create_root(): Internal error, invalid Euler angle code given')
 
     end_effector = Bone()
     end_effector.idx = len(skeleton.bones)
     end_effector.parent = parent_idx
     end_effector.t = V3.make(tx, ty, tz)
     end_effector.alpha = alpha
-    end_effector.beta = beta
-    end_effector.gamma = gamma
     end_effector.euler_code = euler_code
 
     skeleton.bones[parent_idx].children.append(end_effector.idx)
@@ -112,18 +107,17 @@ def __update_bone(bone, skeleton) -> None:
     :param skeleton:      The IK skeleton holding all the bones.
     :return:              None.
     """
-    q_alpha = bone.get_rotation_alpha()
-    q_beta = bone.get_rotation_beta()
-    q_gamma = bone.get_rotation_gamma()
-    q_bone = Q.prod(q_alpha, Q.prod(q_beta, q_gamma))
+    q_alpha = bone.get_rotation_alpha()  # Rotation based on alpha angle only
 
     t_parent = V3.zero()
     q_parent = Q.identity()
     if bone.has_parent():
         t_parent = skeleton.bones[bone.parent].t_wcs
         q_parent = skeleton.bones[bone.parent].q_wcs
+
+    # Update this bone's world coordinate translation and rotation
     bone.t_wcs = t_parent + Q.rotate(q_parent, bone.t)
-    bone.q_wcs = Q.prod(q_parent, q_bone)
+    bone.q_wcs = Q.prod(q_parent, q_alpha)  # Only use the alpha rotation
 
     for idx in bone.children:
         __update_bone(skeleton.bones[idx], skeleton)
@@ -200,11 +194,9 @@ def get_joint_angles(skeleton):
     :param skeleton:  The IK skeleton from where to retrieve the joint angles.
     :return:          A numpy array holding the joint angle values.
     """
-    angles = np.zeros((len(skeleton.bones) * 3,), dtype=np.float64)
+    angles = np.zeros((len(skeleton.bones),), dtype=np.float64)
     for bone in skeleton.bones:
-        angles[bone.idx * 3 + 0] = bone.alpha
-        angles[bone.idx * 3 + 1] = bone.beta
-        angles[bone.idx * 3 + 2] = bone.gamma
+        angles[bone.idx + 0] = bone.alpha
     return angles
 
 
@@ -219,9 +211,7 @@ def set_joint_angles(skeleton, angles) -> None:
     :return:               None.
     """
     for bone in skeleton.bones:
-        bone.alpha = angles[bone.idx * 3 + 0]
-        bone.beta = angles[bone.idx * 3 + 1]
-        bone.gamma = angles[bone.idx * 3 + 2]
+        bone.alpha = angles[bone.idx + 0]
 
 
 def get_end_effector(chain, skeleton):
@@ -248,106 +238,74 @@ def compute_jacobian(chains, skeleton):
     :param skeleton:  The IK skeleton.
     :return:          A numpy matrix with the value of the Jacobian.
     """
-    num_angles = len(skeleton.bones) * 3
+    num_angles = len(skeleton.bones)  # Only one angle per bone now
     num_coords = len(chains) * 3
     J = np.zeros((num_coords, num_angles), dtype=np.float64)
     row_offset = 0
     for chain in chains:
         e = get_end_effector(chain, skeleton)
-        for idx in chain.bones:
-            bone = skeleton.bones[idx]
+        for idx, bone in enumerate(skeleton.bones):
             q_parent = Q.identity()
             if bone.has_parent():
                 q_parent = skeleton.bones[bone.parent].q_wcs
 
-            # In the 5 lines of code below the ZYZ Euler angles are hardwired into the code.
             q_alpha = bone.get_rotation_alpha()
-            q_alpha_beta = Q.prod(q_alpha, bone.get_rotation_beta())
 
             u = Q.rotate(q_parent, bone.get_axis_alpha())
-            v = Q.rotate(q_parent, Q.rotate(q_alpha, bone.get_axis_beta()))
-            w = Q.rotate(q_parent, Q.rotate(q_alpha_beta, bone.get_axis_gamma()))
 
             delta_p = e - bone.t_wcs
 
-            J_alpha = V3.cross(u, delta_p)
-            J_beta = V3.cross(v, delta_p)
-            J_gamma = V3.cross(w, delta_p)
+            J_alpha = np.cross(u, delta_p)
 
-            J[row_offset: row_offset + 3, idx * 3 + 0] = J_alpha
-            J[row_offset: row_offset + 3, idx * 3 + 1] = J_beta
-            J[row_offset: row_offset + 3, idx * 3 + 2] = J_gamma
+            # Update only the column for alpha since beta and gamma are removed
+            J[row_offset:row_offset + 3, idx] = J_alpha
         row_offset += 3
     return J
+
+# Assuming `chains` and `skeleton` are defined elsewhere in your code
 
 
 def compute_hessian(chains, skeleton, J):
     """
-    This function compute the Hessian of the IK objective function wrt all the joint angles.
+    Computes the Hessian matrix using only alpha Euler angle for the IK problem.
 
-    This implementation is based on an analytical solution for computing the gradient and is hence much faster than
-    a numerical approximation method.
-
-    :param chains:       The IK chains of the IK problem.
-    :param skeleton:     The IK skeleton (basically storing the joint angle values)
-    :param J:            The Jacobian matrix of the forward kinematics functions. Should be computed
-                         using the function compute_jacobian.
-    :return:             A numpy matrix holding the Hessian value.
+    :param chains: List of IK chains.
+    :param skeleton: Skeleton structure with joint angle values.
+    :param J: Jacobian matrix computed using alpha angle only.
+    :return: Hessian matrix.
     """
-    H = np.dot(np.transpose(J), J)
+    H = np.dot(J.T, J)
     row_offset = 0
     for chain in chains:
         e = get_end_effector(chain, skeleton)
         r = chain.goal - e
         for k in chain.bones:
-            for h in chain.bones:
-                if h > k:
-                    continue
+            Bk = skeleton.bones[k]
+            q_parent = Q.identity()
+            if Bk.has_parent():
+                q_parent = skeleton.bones[Bk.parent].q_wcs
 
+            q_alpha = Bk.get_rotation_alpha()
+            u = Q.rotate(q_parent, Bk.get_axis_alpha())
+
+            k_offset = k  # Adjust index to account for only alpha
+
+            J_a = J[row_offset:row_offset + 3, k_offset]
+
+            ua = np.dot(np.cross(u, J_a), r)
+
+            # Since Hessian is symmetrical, we only need to update the upper triangle
+            for h in range(k + 1):  # Ensure we only calculate each pair once
                 Bh = skeleton.bones[h]
+                h_offset = h  # Similarly adjusted
 
-                q_parent = Q.identity()
-                if Bh.has_parent():
-                    q_parent = skeleton.bones[Bh.parent].q_wcs
+                J_b = J[row_offset:row_offset + 3, h_offset]
 
-                # In the 7 lines of code below the ZYZ Euler angles are hardwired into the code.
-                q_alpha = Bh.get_rotation_alpha()
-                q_beta = Bh.get_rotation_beta()
-                q_gamma = Bh.get_rotation_gamma()
-                q_alpha_beta = Q.prod(q_alpha, q_beta)
+                ub = np.dot(np.cross(u, J_b), r)
 
-                u = Q.rotate(q_parent, Bh.get_axis_alpha())
-                v = Q.rotate(q_parent, Q.rotate(q_alpha, Bh.get_axis_beta()))
-                w = Q.rotate(q_parent, Q.rotate(q_alpha_beta, Bh.get_axis_gamma()))
-
-                k_offset = k * 3
-                h_offset = h * 3
-
-                J_a = J[row_offset:row_offset + 3, k_offset]
-                J_b = J[row_offset:row_offset + 3, k_offset + 1]
-                J_c = J[row_offset:row_offset + 3, k_offset + 2]
-
-                ua = np.dot(V3.cross(u, J_a), r)
-                va = np.dot(V3.cross(v, J_a), r)
-                wa = np.dot(V3.cross(w, J_a), r)
-
-                ub = np.dot(V3.cross(u, J_b), r)
-                vb = np.dot(V3.cross(v, J_b), r)
-                wb = np.dot(V3.cross(w, J_b), r)
-
-                uc = np.dot(V3.cross(u, J_c), r)
-                vc = np.dot(V3.cross(v, J_c), r)
-                wc = np.dot(V3.cross(w, J_c), r)
-
-                dH = np.array(
-                    [[ua, va, wa],
-                     [ub, vb, wb],
-                     [uc, vc, wc]]
-                )
-
-                H[h_offset:h_offset + 3, k_offset:k_offset + 3] -= dH
+                H[h_offset, k_offset] -= ub
                 if h != k:
-                    H[k_offset:k_offset + 3, h_offset:h_offset + 3] -= np.transpose(dH)
+                    H[k_offset, h_offset] = H[h_offset, k_offset]  # Symmetry
 
         row_offset += 3
     return H
@@ -406,16 +364,7 @@ def set_angle(idx, value, skeleton) -> None:
     :param skeleton:   The IK skeleton from which to set the angle value from.
     :return:           None
     """
-    k = idx // 3
-    offset = idx % 3
-    if offset == 0:
-        skeleton.bones[k].alpha = value
-    elif offset == 1:
-        skeleton.bones[k].beta = value
-    elif offset == 2:
-        skeleton.bones[k].gamma = value
-    else:
-        raise RuntimeError('set_angle(): no such offset exist')
+    skeleton.bones[idx].alpha = value
 
 
 def get_angle(idx, skeleton) -> float:
@@ -427,16 +376,7 @@ def get_angle(idx, skeleton) -> float:
     :param skeleton:   The IK skeleton from which to retrive the angle value from.
     :return:           The value of the idx-joint-angle.
     """
-    k = idx // 3
-    offset = idx % 3
-    if offset == 0:
-        return skeleton.bones[k].alpha
-    elif offset == 1:
-        return skeleton.bones[k].beta
-    elif offset == 2:
-        return skeleton.bones[k].gamma
-    else:
-        raise RuntimeError('get_angle(): no such offset exist')
+    return skeleton.bones[idx].alpha
 
 
 def __numerical_differentiation_second_derivative(chains, skeleton, i, j, h):
@@ -528,7 +468,8 @@ def compute_finite_difference_gradient(chains, skeleton, h=0.1):
     N = len(skeleton.bones) * 3
     g = np.zeros((N,), dtype=np.float64)
     for i in range(N):
-        g[i] = __numerical_differentiation_first_derivative(chains, skeleton, i, h)
+        g[i] = __numerical_differentiation_first_derivative(
+            chains, skeleton, i, h)
     return g
 
 
@@ -550,5 +491,6 @@ def compute_finite_difference_hessian(chains, skeleton, h=0.1):
     H = np.zeros((N, N), dtype=np.float64)
     for i in range(N):
         for j in range(N):
-            H[i, j] = __numerical_differentiation_second_derivative(chains, skeleton, i, j, h)
+            H[i, j] = __numerical_differentiation_second_derivative(
+                chains, skeleton, i, j, h)
     return H
