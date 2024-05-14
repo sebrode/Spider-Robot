@@ -251,14 +251,18 @@ def compute_jacobian(chains, skeleton):
 
             q_alpha = bone.get_rotation_alpha()
 
-            u = Q.rotate(q_parent, bone.get_axis_alpha())
-
             delta_p = e - bone.t_wcs
 
-            J_alpha = np.cross(u, delta_p)
+            if idx == 0:
+                v = Q.rotate(q_parent, Q.rotate(q_alpha, bone.get_axis_beta()))
+                J_beta = V3.cross(v, delta_p)
+                J[row_offset:row_offset + 3, idx] = J_beta
+            else:
+                u = Q.rotate(q_parent, bone.get_axis_alpha())
+                J_alpha = np.cross(u, delta_p)
+                J[row_offset:row_offset + 3, idx] = J_alpha
 
             # Update only the column for alpha since beta and gamma are removed
-            J[row_offset:row_offset + 3, idx] = J_alpha
         row_offset += 3
     return J
 
@@ -274,42 +278,78 @@ def compute_hessian(chains, skeleton, J):
     :param J: Jacobian matrix computed using alpha angle only.
     :return: Hessian matrix.
     """
-    H = np.dot(J.T, J)
+    H = np.dot(np.transpose(J), J)
     row_offset = 0
     for chain in chains:
         e = get_end_effector(chain, skeleton)
         r = chain.goal - e
         for k in chain.bones:
-            Bk = skeleton.bones[k]
-            q_parent = Q.identity()
-            if Bk.has_parent():
-                q_parent = skeleton.bones[Bk.parent].q_wcs
+            for h in chain.bones:
+                if h > k:
+                    continue
 
-            q_alpha = Bk.get_rotation_alpha()
-            u = Q.rotate(q_parent, Bk.get_axis_alpha())
-
-            k_offset = k  # Adjust index to account for only alpha
-
-            J_a = J[row_offset:row_offset + 3, k_offset]
-
-            ua = np.dot(np.cross(u, J_a), r)
-
-            # Since Hessian is symmetrical, we only need to update the upper triangle
-            for h in range(k + 1):  # Ensure we only calculate each pair once
                 Bh = skeleton.bones[h]
-                h_offset = h  # Similarly adjusted
 
-                J_b = J[row_offset:row_offset + 3, h_offset]
+                q_parent = Q.identity()
+                if Bh.has_parent():
+                    q_parent = skeleton.bones[Bh.parent].q_wcs
 
-                ub = np.dot(np.cross(u, J_b), r)
+                # In the 7 lines of code below the ZYZ Euler angles are hardwired into the code.
+                q_alpha = Bh.get_rotation_alpha()
+                q_beta = Bh.get_rotation_beta()
+                q_alpha_beta = Q.prod(q_alpha, q_beta)
+                
 
-                H[h_offset, k_offset] -= ub
+                u = Q.rotate(q_parent, Bh.get_axis_alpha())
+                # v = Q.rotate(q_parent, Bh.get_axis_beta())
+                v = Q.rotate(q_parent, Q.rotate(q_alpha, Bh.get_axis_beta()))
+                w = Q.rotate(q_parent, Q.rotate(q_alpha_beta, Bh.get_axis_gamma()))
+
+                J_a = J[row_offset:row_offset + 3, k]
+
+                ua = np.dot(V3.cross(u, J_a), r)
+                va = np.dot(V3.cross(v, J_a), r)
+                wa = np.dot(V3.cross(w, J_a), r)
+
+                ub = np.dot(V3.cross(u, J_a), r)
+                vb = np.dot(V3.cross(v, J_a), r)
+                wb = np.dot(V3.cross(w, J_a), r)
+
+                uc = np.dot(V3.cross(u, J_a), r)
+                vc = np.dot(V3.cross(v, J_a), r)
+                wc = np.dot(V3.cross(w, J_a), r)
+
+                k_offset = k * 3
+                h_offset = h * 3
+
+                
+
+
+                if k == 0 and h == 0:
+                    # va = np.dot(V3.cross(v, J_a), r)
+                    # print(np.array(
+                    #     [[ua, va, wa],
+                    #     [ub, vb, wb],
+                    #     [uc, vc, wc]]
+                    # ))
+                    dH = vb
+                elif k == 0 and h > 0:
+                    # vb = np.dot(V3.cross(u, J_a), r)
+                    dH = va
+                elif k > 0 and h == 0:
+                    # ua = np.dot(V3.cross(v, J_a), r)
+                    dH = ub
+                else:
+                    # ub = np.dot(V3.cross(u, J_a), r)
+                    dH = ua
+
+
+                H[h, k] -= dH
                 if h != k:
-                    H[k_offset, h_offset] = H[h_offset, k_offset]  # Symmetry
+                    H[k, h] -= np.transpose(dH)
 
         row_offset += 3
     return H
-
 
 def compute_gradient(chains, skeleton, J):
     """

@@ -63,8 +63,20 @@ class Bone:
     def get_axis_alpha(self):
         return self.get_axis(0)
 
+    def get_axis_beta(self):
+        return self.get_axis(1)
+    
+    def get_axis_gamma(self):
+        return self.get_axis(2)
+
     def get_rotation_alpha(self):
         return self.get_rotation(0, self.alpha)
+    
+    def get_rotation_beta(self):
+        return self.get_rotation(1, self.alpha)
+    
+    def get_rotation_gamma(self):
+        return self.get_rotation(2, self.alpha)
 
 
 class Skeleton:
