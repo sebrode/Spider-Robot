@@ -42,43 +42,54 @@ app.config['DEBUG'] = True
 # Store HTML code
 TPL = '''
 <html>
-    <head><title>Web Application to control Servos </title></head>
+    <head>
+        <title>Web Application to control Servos</title>
+        <style>
+            body {
+                background-color: #e0f7fa; /* Very light blue background */
+            }
+        </style>
+    </head>
     <body>
-    <h1> Web Application to Control Servos</h1>
+        <h1>Web Application to Control Servos</h1>
         <form method="POST" action="reset">
             <input type="submit" value="Reset all servos" />
         </form>
+        <hr>
         <form method="POST" action="test">
-        <select name="selected_leg">
+            <select name="selected_leg">
                 <option value="0">Grey Leg</option>
                 <option value="1">Black Leg</option>
                 <option value="2" selected>Red Leg</option>
                 <option value="3">Blue Leg</option>
             </select>
 
-        <p>Slider 1 <input type="range" min="1" max="180" name="slider1" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output1">90</output></p>
-        <p>Slider 2 <input type="range" min="1" max="180" name="slider2" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
-        <p>Slider 3 <input type="range" min="1" max="180" name="slider3" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
-                    <input type="submit" value="submit" />
+            <p>Slider 1 <input type="range" min="1" max="180" name="slider1" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output1">90</output></p>
+            <p>Slider 2 <input type="range" min="1" max="180" name="slider2" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output2">90</output></p>
+            <p>Slider 3 <input type="range" min="1" max="180" name="slider3" value="90" oninput="this.nextElementSibling.value = this.value"/> <output id="output3">90</output></p>
+            <input type="submit" value="submit" />
         </form>
+        <hr>
         <h1>IK Matrix All Legs</h1>
         <form method="POST" action="ik">
             <textarea id="ik_matrix_full" placeholder="Full Matrix" name="ik_matrix_full" rows="10" cols="50"></textarea>
             <input type="number" id="ik_step_time" name="ik_step_time" value="0.2" min="0" max="10" step="0.1">
             <input type="submit" value="submit" />
         </form>
+        <hr>
         <h1>IK Matrix Single Leg</h1>
         <form method="POST" action="iktest">
             <textarea id="ik_matrix" name="ik_matrix" rows="10" cols="50"></textarea>
             <input type="number" id="ik_step_time" name="ik_step_time" value="1" min="0" max="10" step="0.1">
             <select name="ik_leg" id="ik_leg">
-              <option value="0">Grey Leg</option>
-              <option value="1">Black Leg</option>
-              <option value="2" selected>Red Leg</option>
-              <option value="3">Blue Leg</option>
+                <option value="0">Grey Leg</option>
+                <option value="1">Black Leg</option>
+                <option value="2" selected>Red Leg</option>
+                <option value="3">Blue Leg</option>
             </select>
             <input type="submit" value="submit" />
         </form>
+        <hr>
         <h1>Movement</h1>
         <form method="POST" action="move">
             <button type="submit" name="direction" value="forward">^</button>
@@ -88,33 +99,37 @@ TPL = '''
         </form>
     </body>
     <script>
-  function handleOutputClick(output, sliderName) {
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.value = output.textContent;
-    input.addEventListener('change', function() {
-      const newValue = parseInt(this.value);
-      if (!isNaN(newValue)) {
-        document.querySelector(`input[name="${sliderName}"]`).value = newValue;
-        output.textContent = newValue;
-      }
-      input.replaceWith(output);
-    });
-    input.addEventListener('blur', function() {
-      input.replaceWith(output);
-    });
-    output.replaceWith(input);
-    input.focus();
-  }
+        function handleOutputClick(output, sliderName) {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.value = output.textContent;
+            input.addEventListener('change', function() {
+                const newValue = parseInt(this.value);
+                if (!isNaN(newValue)) {
+                    document.querySelector(`input[name="${sliderName}"]`).value = newValue;
+                    output.textContent = newValue;
+                }
+                input.replaceWith(output);
+            });
+            input.addEventListener('blur', function() {
+                input.replaceWith(output);
+            });
+            output.replaceWith(input);
+            input.focus();
+        }
 
-  document.getElementById('output1').addEventListener('click', function() {
-    handleOutputClick(this, 'slider1');
-  });
+        document.getElementById('output1').addEventListener('click', function() {
+            handleOutputClick(this, 'slider1');
+        });
 
-  document.getElementById('output2').addEventListener('click', function() {
-    handleOutputClick(this, 'slider2');
-  });
-</script>
+        document.getElementById('output2').addEventListener('click', function() {
+            handleOutputClick(this, 'slider2');
+        });
+
+        document.getElementById('output3').addEventListener('click', function() {
+            handleOutputClick(this, 'slider3');
+        });
+    </script>
 </html>
 '''
 
