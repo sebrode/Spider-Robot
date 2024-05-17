@@ -9,6 +9,8 @@ class Bone:
         self.idx = 0  # Bone index
         self.euler_code = 'ZYZ'  # Euler angle convention
         self.alpha = 0.0  # Euler angles of bone
+        self.beta = 0.0
+        self.gamma = 0.0
         self.q_wcs = Q.identity()  # Joint frame orientation in WCS
         self.t_wcs = V3.zero()  # Joint origin in WCS
         self.t = V3.zero()  # Joint vector in parent frame
@@ -24,7 +26,9 @@ class Bone:
         txt = txt + "\t\"idx\" : " + str(self.idx) + ",\n"
         txt = txt + "\t\"parent\" : " + str(self.parent) + ",\n"
         txt = txt + "\t\"euler\" : \"" + self.euler_code + "\",\n"
-        txt = txt + "\t\"angles\" : { \"alpha\" : " + str(self.alpha) + "},\n"
+        txt = txt + "\t\"angles\" : { \"alpha\" : " + str(self.alpha) + \
+            ", \"beta\" : " + str(self.beta) + \
+            ", \"gamma\" : " + str(self.gamma) + "},\n"
         txt = txt + "\t\"origin\" : " + \
             np.array2string(self.t, separator=', ') + ",\n"
         txt = txt + "\t\"children\" : " + str(self.children) + "\n"
@@ -65,18 +69,18 @@ class Bone:
 
     def get_axis_beta(self):
         return self.get_axis(1)
-    
+
     def get_axis_gamma(self):
         return self.get_axis(2)
 
     def get_rotation_alpha(self):
         return self.get_rotation(0, self.alpha)
-    
+
     def get_rotation_beta(self):
-        return self.get_rotation(1, self.alpha)
-    
+        return self.get_rotation(1, self.beta)
+
     def get_rotation_gamma(self):
-        return self.get_rotation(2, self.alpha)
+        return self.get_rotation(2, self.gamma)
 
 
 class Skeleton:
