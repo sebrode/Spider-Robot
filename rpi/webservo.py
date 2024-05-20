@@ -32,6 +32,9 @@ def initialize_servos():
 def SetAngle(num, ang):
     kit.servo[num].angle = ang
 
+def GetAngle(num):
+    return kit.servo[num].angle
+
 
 # Flask constructor takes the name of current module (__name__) as argument.
 app = Flask(__name__)
@@ -177,19 +180,21 @@ def ik():
         eval(ik_matrix_full.replace('\n', '').replace(' ', '')))
     step_time = float(ik_step_time)
 
-    greyAngle1 = 0
-    greyAngle2 = 0
-    greyAngle3 = 0
-    blackAngle1 = 0
-    blackAngle2 = 0
-    blackAngle3 = 0
-    redAngle1 = 0
-    redAngle2 = 0
-    redAngle3 = 0
-    blueAngle1 = 0
-    blueAngle2 = 0
-    blueAngle3 = 0
+
     for i in range(max(matrix_full[0].shape[1], matrix_full[1].shape[1], matrix_full[2].shape[1], matrix_full[3].shape[1])):
+        greyAngle1 = GetAngle(int(allLegs[0][0]))
+        greyAngle2 = GetAngle(int(allLegs[0][1]))
+        greyAngle3 = GetAngle(int(allLegs[0][2]))
+        blackAngle1 = GetAngle(int(allLegs[1][0]))
+        blackAngle2 = GetAngle(int(allLegs[1][1]))
+        blackAngle3 = GetAngle(int(allLegs[1][2]))
+        redAngle1 = GetAngle(int(allLegs[2][0]))
+        redAngle2 = GetAngle(int(allLegs[2][1]))
+        redAngle3 = GetAngle(int(allLegs[2][2]))
+        blueAngle1 = GetAngle(int(allLegs[3][0]))
+        blueAngle2 = GetAngle(int(allLegs[3][1]))
+        blueAngle3 = GetAngle(int(allLegs[3][2]))
+
         if i < matrix_full[0].shape[1]:
             greyAngle1 = round(
                 90 + math.degrees(float(matrix_full[0][0][i])), 2)
@@ -217,11 +222,6 @@ def ik():
             blueAngle2 = round(90+math.degrees(float(matrix_full[3][1][i])), 2)
             blueAngle3 = round(math.degrees(
                 float(abs(matrix_full[3][2][i]))), 2)
-
-        print(greyAngle1, greyAngle2, greyAngle3,
-              blackAngle1, blackAngle2, blackAngle3)
-        print(redAngle1, redAngle2, redAngle3,
-              blueAngle1, blueAngle2, blueAngle3)
 
         SetAngle(int(allLegs[0][0]), greyAngle1)
         SetAngle(int(allLegs[0][1]), greyAngle2)
