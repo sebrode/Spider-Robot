@@ -73,42 +73,75 @@ def simulateSpider(positionMatrix):
 
 greyPositionMatrix = np.array([
     V3.make(12.0, -7.0, 0.0),
-    V3.make(10.0, -5.0, 0.0),
-    V3.make(6.0, -5.0, 0.0),
-    V3.make(6.0, -7.0, 0.0),
-    V3.make(10.0, -9.0, 0.0),
-    V3.make(15.0, -7.0, 0.0),
-    V3.make(10.0, -7.0, 0.0)
+    V3.make(8.0, -7.0, 4.0),
+    V3.make(8.0, -7.0, 4.0),
+    V3.make(8.0, -7.0, 4.0),
+    V3.make(8.0, 0.0, 4.0),
+    V3.make(6.0, 0.0, 10.0),
+    V3.make(6.0, -7.0, 10.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0)
 ])
 
 blackPositionMatrix = np.array([
     V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -5.0, 0.0),
-    V3.make(15.0, -5.0, 0.0),
-    V3.make(15.0, -7.0, 0.0),
-    V3.make(10.0, -9.0, 0.0),
-    V3.make(6.0, -7.0, 0.0),
-    V3.make(10.0, -7.0, 0.0)
+    V3.make(12.0, -3.0, 0.0),
+    V3.make(6.0, -3.0, -8.0),
+    V3.make(6.0, -7.0, -8.0),
+    V3.make(6.0, -7.0, -8.0),
+    V3.make(6.0, -7.0, -8.0),
+    V3.make(6.0, -7.0, -8.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0)
+
 ])
 
 redPositionMatrix = np.array([
     V3.make(12.0, -7.0, 0.0),
-    V3.make(10.0, -5.0, 0.0),
-    V3.make(6.0, -5.0, 0.0),
-    V3.make(6.0, -7.0, 0.0),
-    V3.make(10.0, -9.0, 0.0),
-    V3.make(15.0, -7.0, 0.0),
-    V3.make(10.0, -7.0, 0.0)
+    V3.make(10.0, -7.0, -2.0),
+    V3.make(10.0, -7.0, -2.0),
+    V3.make(10.0, -7.0, -2.0),
+    V3.make(10.0, -7.0, -2.0),
+    V3.make(10.0, -7.0, -2.0),
+    V3.make(3.0, -7.0, -12.0),
+    V3.make(1.0, -7.0, -20.0),
+    V3.make(1.0, -3.0, -20.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
+    V3.make(12.0, -7.0, 0.0),
 ])
 
 bluePositionMatrix = np.array([
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -5.0, 0.0),
-    V3.make(15.0, -5.0, 0.0),
-    V3.make(15.0, -7.0, 0.0),
-    V3.make(10.0, -9.0, 0.0),
-    V3.make(6.0, -7.0, 0.0),
-    V3.make(10.0, -7.0, 0.0)
+    V3.make(12.0, -7.0, 2.0),
+    V3.make(12.0, -7.0, 2.0),
+    V3.make(12.0, -7.0, 2.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0),
+    V3.make(2.0, -7.0, 12.0)
 ])
 
 greyAngleMatrix, greyObjectMatrix = simulateSpider(greyPositionMatrix)
@@ -117,7 +150,7 @@ redAngleMatrix, redObjectMatrix = simulateSpider(redPositionMatrix)
 blueAngleMatrix, blueObjectMatrix = simulateSpider(bluePositionMatrix)
 
 fullAngleMatrix = np.array([greyAngleMatrix[[1, 3, 6, 9], :], blackAngleMatrix[[
-                            1, 3, 6, 9], :], redAngleMatrix[[1, 3, 6, 9], :], blueAngleMatrix[[1, 3, 6, 9], :]])
+    1, 3, 6, 9], :], redAngleMatrix[[1, 3, 6, 9], :], blueAngleMatrix[[1, 3, 6, 9], :]])
 fullObjectMatrix = np.array(
     [greyObjectMatrix, blackObjectMatrix, redObjectMatrix, blueObjectMatrix])
 
@@ -131,4 +164,4 @@ def getObjectMatrix():
 
 
 print(np.array2string(fullAngleMatrix, separator=', '))
-print(np.array2string(fullObjectMatrix, separator=', '))
+# print(np.array2string(fullObjectMatrix, separator=', '))
