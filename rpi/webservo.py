@@ -1,13 +1,19 @@
-# Importing the Flask modules required for this project
 from flask import Flask, render_template_string, redirect, request
-# Importing the GPIO library to control GPIO pins of Raspberry Pi
-import RPi.GPIO as GPIO
-# Importing the Flask modules required for this project
-from flask import Flask, render_template_string, redirect, request
-from time import sleep      # Import sleep module from time library to add delays
+from time import sleep
 from adafruit_servokit import ServoKit
 import numpy as np
 import math
+import time
+
+import board
+import adafruit_mpu6050
+import threading
+
+mpu = adafruit_mpu6050.MPU6050(board.I2C())
+roll = 0.0
+pitch = 0.0
+
+start_time = time.time()
 
 kit = ServoKit(channels=16)
 leg0 = [0, 1, 2]
@@ -16,6 +22,24 @@ leg2 = [8, 9, 10]
 leg3 = [12, 13, 14]
 legs = [leg0, leg1, leg2, leg3, [leg0, leg1, leg2, leg3]]
 
+
+def calculate_tilt(ax, ay, az):
+    roll = math.atan2(ay, az)
+    pitch = math.atan2(-ax, math.sqrt(ay * ay + az * az))
+    return roll, pitch
+
+def tilt_calculation():
+    global roll, pitch
+    while True:
+        accel_x, accel_y, accel_z = mpu.acceleration
+        roll, pitch = calculate_tilt(accel_x, accel_y, accel_z)
+        roll = math.degrees(roll)
+        pitch = math.degrees(pitch)
+        time.sleep(0.1)
+
+tilt_thread = threading.Thread(target=tilt_calculation)
+tilt_thread.daemon = True
+tilt_thread.start()
 
 def initialize_servos():
     for i in range(16):
@@ -26,7 +50,6 @@ def initialize_servos():
             kit.servo[i].angle = 120
         else:
             kit.servo[i].angle = 90
-# initialize_servos()
 
 
 def SetAngle(num, ang):
@@ -36,13 +59,10 @@ def GetAngle(num):
     return kit.servo[num].angle
 
 
-# Flask constructor takes the name of current module (__name__) as argument.
 app = Flask(__name__)
-# Enable debug mode
 app.config['DEBUG'] = True
 
 
-# Store HTML code
 TPL = '''
 <html>
     <head>
@@ -76,7 +96,11 @@ TPL = '''
         <h1>IK Matrix All Legs</h1>
         <form method="POST" action="ik">
             <textarea id="ik_matrix_full" placeholder="Full Matrix" name="ik_matrix_full" rows="10" cols="50"></textarea>
-            <input type="number" id="ik_step_time" name="ik_step_time" value="0.2" min="0" max="10" step="0.1">
+            <br>
+            Step time: <input type="number" id="ik_step_time" name="ik_step_time" value="2" min="0" max="10" step="0.1">
+            <br>
+            Loop count: <input type="number" id="ik_loop_count" name="ik_loop_count" value="1" min="0" max="100" step="1">
+            <br>
             <input type="submit" value="submit" />
         </form>
         <hr>
@@ -136,8 +160,6 @@ TPL = '''
 </html>
 '''
 
-# which URL should call the associated function.
-
 
 @app.route("/")
 def home():
@@ -159,10 +181,13 @@ def iktest():
     matrix = np.array(eval(ik_matrix))
     step_time = float(ik_step_time)
 
-    for i in range(matrix.shape[0]):
-        angle1 = 90
-        angle2 = 90-math.degrees(matrix[i][1])
-        angle3 = 45-math.degrees(matrix[i][2])
+    print(matrix.shape[1])
+    for i in range(matrix.shape[1]):
+        angle1 = 90+math.degrees(matrix[0][i])
+        angle2 = 90+math.degrees(matrix[1][i])
+        angle3 = math.degrees(abs(matrix[2][i]))
+
+
         SetAngle(int(leg[0]), angle1)
         SetAngle(int(leg[1]), angle2)
         SetAngle(int(leg[2]), angle3)
@@ -175,78 +200,82 @@ def iktest():
 def ik():
     ik_matrix_full = request.form["ik_matrix_full"]
     ik_step_time = request.form["ik_step_time"]
+    ik_loop_count = request.form["ik_loop_count"]
     allLegs = [legs[0], legs[1], legs[2], legs[3]]
     matrix_full = np.array(
         eval(ik_matrix_full.replace('\n', '').replace(' ', '')))
+    loop_count = int(ik_loop_count)
+    if loop_count < 1:
+        loop_count = 1
     step_time = float(ik_step_time)
 
+    for j in range(loop_count):
+        print(f"Roll: {roll:.2f} degrees, Pitch: {pitch:.2f} degrees")
+        for i in range(max(matrix_full[0].shape[1], matrix_full[1].shape[1], matrix_full[2].shape[1], matrix_full[3].shape[1])):
+            greyAngle1 = GetAngle(int(allLegs[0][0]))
+            greyAngle2 = GetAngle(int(allLegs[0][1]))
+            greyAngle3 = GetAngle(int(allLegs[0][2]))
+            blackAngle1 = GetAngle(int(allLegs[1][0]))
+            blackAngle2 = GetAngle(int(allLegs[1][1]))
+            blackAngle3 = GetAngle(int(allLegs[1][2]))
+            redAngle1 = GetAngle(int(allLegs[2][0]))
+            redAngle2 = GetAngle(int(allLegs[2][1]))
+            redAngle3 = GetAngle(int(allLegs[2][2]))
+            blueAngle1 = GetAngle(int(allLegs[3][0]))
+            blueAngle2 = GetAngle(int(allLegs[3][1]))
+            blueAngle3 = GetAngle(int(allLegs[3][2]))
 
-    for i in range(max(matrix_full[0].shape[1], matrix_full[1].shape[1], matrix_full[2].shape[1], matrix_full[3].shape[1])):
-        greyAngle1 = GetAngle(int(allLegs[0][0]))
-        greyAngle2 = GetAngle(int(allLegs[0][1]))
-        greyAngle3 = GetAngle(int(allLegs[0][2]))
-        blackAngle1 = GetAngle(int(allLegs[1][0]))
-        blackAngle2 = GetAngle(int(allLegs[1][1]))
-        blackAngle3 = GetAngle(int(allLegs[1][2]))
-        redAngle1 = GetAngle(int(allLegs[2][0]))
-        redAngle2 = GetAngle(int(allLegs[2][1]))
-        redAngle3 = GetAngle(int(allLegs[2][2]))
-        blueAngle1 = GetAngle(int(allLegs[3][0]))
-        blueAngle2 = GetAngle(int(allLegs[3][1]))
-        blueAngle3 = GetAngle(int(allLegs[3][2]))
+            if i < matrix_full[0].shape[1]:
+                greyAngle1 = round(
+                    90 + math.degrees(float(matrix_full[0][0][i])), 2)
+                greyAngle2 = round(
+                    90 + math.degrees(float(matrix_full[0][1][i])), 2)
+                greyAngle3 = round(math.degrees(
+                    abs(float(abs(matrix_full[0][2][i])))), 2)
 
-        if i < matrix_full[0].shape[1]:
-            greyAngle1 = round(
-                90 + math.degrees(float(matrix_full[0][0][i])), 2)
-            greyAngle2 = round(
-                90 + math.degrees(float(matrix_full[0][1][i])), 2)
-            greyAngle3 = round(math.degrees(
-                abs(float(abs(matrix_full[0][2][i])))), 2)
+            if i < matrix_full[1].shape[1]:
+                blackAngle1 = round(
+                    90+math.degrees(float(matrix_full[1][0][i])), 2)
+                blackAngle2 = round(
+                    90+math.degrees(float(matrix_full[1][1][i])), 2)
+                blackAngle3 = round(math.degrees(
+                    float(abs(matrix_full[1][2][i]))), 2)
 
-        if i < matrix_full[1].shape[1]:
-            blackAngle1 = round(
-                90+math.degrees(float(matrix_full[1][0][i])), 2)
-            blackAngle2 = round(
-                90+math.degrees(float(matrix_full[1][1][i])), 2)
-            blackAngle3 = round(math.degrees(
-                float(abs(matrix_full[1][2][i]))), 2)
+            if i < matrix_full[2].shape[1]:
+                redAngle1 = round(90+math.degrees(float(matrix_full[2][0][i])), 2)
+                redAngle2 = round(90+math.degrees(float(matrix_full[2][1][i])), 2)
+                redAngle3 = round(math.degrees(
+                    float(abs(matrix_full[2][2][i]))), 2)
 
-        if i < matrix_full[2].shape[1]:
-            redAngle1 = round(90+math.degrees(float(matrix_full[2][0][i])), 2)
-            redAngle2 = round(90+math.degrees(float(matrix_full[2][1][i])), 2)
-            redAngle3 = round(math.degrees(
-                float(abs(matrix_full[2][2][i]))), 2)
+            if i < matrix_full[3].shape[1]:
+                blueAngle1 = round(90+math.degrees(float(matrix_full[3][0][i])), 2)
+                blueAngle2 = round(90+math.degrees(float(matrix_full[3][1][i])), 2)
+                blueAngle3 = round(math.degrees(
+                    float(abs(matrix_full[3][2][i]))), 2)
 
-        if i < matrix_full[3].shape[1]:
-            blueAngle1 = round(90+math.degrees(float(matrix_full[3][0][i])), 2)
-            blueAngle2 = round(90+math.degrees(float(matrix_full[3][1][i])), 2)
-            blueAngle3 = round(math.degrees(
-                float(abs(matrix_full[3][2][i]))), 2)
+            SetAngle(int(allLegs[0][0]), greyAngle1)
+            SetAngle(int(allLegs[0][1]), greyAngle2)
+            SetAngle(int(allLegs[0][2]), greyAngle3)
 
-        SetAngle(int(allLegs[0][0]), greyAngle1)
-        SetAngle(int(allLegs[0][1]), greyAngle2)
-        SetAngle(int(allLegs[0][2]), greyAngle3)
+            SetAngle(int(allLegs[1][0]), blackAngle1)
+            SetAngle(int(allLegs[1][1]), blackAngle2)
+            SetAngle(int(allLegs[1][2]), blackAngle3)
 
-        SetAngle(int(allLegs[1][0]), blackAngle1)
-        SetAngle(int(allLegs[1][1]), blackAngle2)
-        SetAngle(int(allLegs[1][2]), blackAngle3)
+            SetAngle(int(allLegs[2][0]), redAngle1)
+            SetAngle(int(allLegs[2][1]), redAngle2)
+            SetAngle(int(allLegs[2][2]), redAngle3)
 
-        SetAngle(int(allLegs[2][0]), redAngle1)
-        SetAngle(int(allLegs[2][1]), redAngle2)
-        SetAngle(int(allLegs[2][2]), redAngle3)
-
-        SetAngle(int(allLegs[3][0]), blueAngle1)
-        SetAngle(int(allLegs[3][1]), blueAngle2)
-        SetAngle(int(allLegs[3][2]), blueAngle3)
-        sleep(step_time)
+            SetAngle(int(allLegs[3][0]), blueAngle1)
+            SetAngle(int(allLegs[3][1]), blueAngle2)
+            SetAngle(int(allLegs[3][2]), blueAngle3)
+            sleep(step_time)
     return redirect("/")
 
 
 @app.route("/test", methods=["POST"])
 def test():
-    # Get selected leg index from the form
     selected_leg_index = int(request.form["selected_leg"])
-    leg = legs[selected_leg_index]  # Get the servo IDs for the selected leg
+    leg = legs[selected_leg_index]
 
     # Get slider values
     slider1 = int(request.form["slider1"])
@@ -258,30 +287,88 @@ def test():
     SetAngle(leg[1], slider2)
     SetAngle(leg[2], slider3)
 
-    # Change duty cycle
     return redirect("/")
 
 
 @app.route("/move", methods=["POST"])
 def move():
-    direction = request.form["direction"]
-    print(direction)
-    match(direction):
-        case "forward":
-            kit.servo[0].angle = 60
-            kit.servo[1].angle = 120
-            sleep(0.2)
-            kit.servo[0].angle = 120
-            kit.servo[1].angle = 60
-        case "back":
-            kit.servo[0].angle = 120
-            kit.servo[1].angle = 60
-            sleep(0.2)
-            kit.servo[0].angle = 60
-            kit.servo[1].angle = 120
+    ik_matrix_full = "[[[ 0.00000000e+00, -4.63701429e-01, -4.63653134e-01, -4.63648714e-01," + "-4.63654642e-01, -1.03036939e+00, -1.03037475e+00,  1.67648366e-06," + " 3.55165330e-07, -2.81580390e-07, -5.86882774e-08]," + "[ 9.08676818e-01,  1.01239756e+00,  1.01240806e+00,  1.01244365e+00," + " 1.57079633e+00,  1.57079633e+00,  9.24552347e-01,  9.08745752e-01," + " 9.08735018e-01,  9.08729909e-01,  9.08722475e-01]," + "[-2.22232033e+00, -2.52574463e+00, -2.52578098e+00, -2.52576480e+00," + "-2.57288056e+00, -2.33253680e+00, -2.25895127e+00, -2.22237846e+00," + "-2.22238261e+00, -2.22236919e+00, -2.22237201e+00]," + "[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]," + "[[-5.86882774e-08,  6.92899790e-08,  9.27333890e-01,  9.27347828e-01," + " 9.27295220e-01,  9.27295218e-01,  9.27295218e-01, -1.88297767e-06," + "-7.65775039e-07, -7.65775039e-07, -7.65775039e-07]," + "[ 9.08722475e-01,  1.57079633e+00,  1.57079633e+00,  9.88477307e-01," + " 9.88474504e-01,  9.88445744e-01,  9.88449682e-01,  9.08700675e-01," + " 9.08694832e-01,  9.08694832e-01,  9.08694832e-01]," + "[-2.22237201e+00, -2.49346154e+00, -2.63885625e+00, -2.42865983e+00," + "-2.42863070e+00, -2.42864550e+00, -2.42862674e+00, -2.22234119e+00," + "-2.22234863e+00, -2.22234863e+00, -2.22234863e+00]," + "[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]," + "[[-7.65775039e-07,  1.97431223e-01,  1.97413685e-01,  1.97394835e-01," + " 1.97394835e-01,  1.97394835e-01,  1.32582082e+00,  1.52084421e+00," + " 1.52085928e+00,  1.97391582e-01,  1.97391582e-01]," + "[ 9.08694832e-01,  9.82203659e-01,  9.82229467e-01,  9.82222432e-01," + " 9.82222432e-01,  9.82222432e-01,  8.90403394e-01,  2.94015738e-01," + " 7.13129747e-01,  9.82189347e-01,  9.82189347e-01]," + "[-2.22234863e+00, -2.40938873e+00, -2.40934656e+00, -2.40935010e+00," + "-2.40935010e+00, -2.40935010e+00, -2.18157874e+00, -1.07688059e+00," + "-1.33234661e+00, -2.40932527e+00, -2.40932527e+00]," + "[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]," + "[[-1.65156815e-01, -1.65151517e-01, -1.65141361e-01, -1.40564026e+00," + "-1.40565120e+00, -1.40565120e+00, -1.40565120e+00, -1.40565120e+00," + "-1.40565120e+00, -1.40565120e+00, -1.40565120e+00]," + "[ 9.00765337e-01,  9.00729741e-01,  9.00692832e-01,  9.00631318e-01," + " 9.00629346e-01,  9.00629346e-01,  9.00629346e-01,  9.00629346e-01," + " 9.00629346e-01,  9.00629346e-01,  9.00629346e-01]," + "[-2.20424149e+00, -2.20426718e+00, -2.20421396e+00, -2.20418584e+00," + "-2.20418542e+00, -2.20418542e+00, -2.20418542e+00, -2.20418542e+00," + "-2.20418542e+00, -2.20418542e+00, -2.20418542e+00]," + "[ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00," + " 0.00000000e+00,  0.00000000e+00,  0.00000000e+00]]]"
+    ik_step_time = 0.2
+    ik_loop_count = 2
+    allLegs = [legs[0], legs[1], legs[2], legs[3]]
+    
+    loop_count = int(ik_loop_count)
+    if loop_count < 1:
+        loop_count = 1
+    step_time = float(ik_step_time)
+
+    for j in range(loop_count):
+        print(f"Roll: {roll:.2f} degrees, Pitch: {pitch:.2f} degrees")
+        if abs(roll) > 170 and abs(roll) < 182:
+            matrix_full = np.array(eval(ik_matrix_full.replace('\n', '').replace(' ', '')))
+        else:
+            matrix_full = np.array(eval(ik_matrix_full.replace('\n', '').replace(' ', '')))
+        for i in range(max(matrix_full[0].shape[1], matrix_full[1].shape[1], matrix_full[2].shape[1], matrix_full[3].shape[1])):
+            greyAngle1 = GetAngle(int(allLegs[0][0]))
+            greyAngle2 = GetAngle(int(allLegs[0][1]))
+            greyAngle3 = GetAngle(int(allLegs[0][2]))
+            blackAngle1 = GetAngle(int(allLegs[1][0]))
+            blackAngle2 = GetAngle(int(allLegs[1][1]))
+            blackAngle3 = GetAngle(int(allLegs[1][2]))
+            redAngle1 = GetAngle(int(allLegs[2][0]))
+            redAngle2 = GetAngle(int(allLegs[2][1]))
+            redAngle3 = GetAngle(int(allLegs[2][2]))
+            blueAngle1 = GetAngle(int(allLegs[3][0]))
+            blueAngle2 = GetAngle(int(allLegs[3][1]))
+            blueAngle3 = GetAngle(int(allLegs[3][2]))
+
+            if i < matrix_full[0].shape[1]:
+                greyAngle1 = round(
+                    90 + math.degrees(float(matrix_full[0][0][i])), 2)
+                greyAngle2 = round(
+                    90 + math.degrees(float(matrix_full[0][1][i])), 2)
+                greyAngle3 = round(math.degrees(
+                    abs(float(abs(matrix_full[0][2][i])))), 2)
+
+            if i < matrix_full[1].shape[1]:
+                blackAngle1 = round(
+                    90+math.degrees(float(matrix_full[1][0][i])), 2)
+                blackAngle2 = round(
+                    90+math.degrees(float(matrix_full[1][1][i])), 2)
+                blackAngle3 = round(math.degrees(
+                    float(abs(matrix_full[1][2][i]))), 2)
+
+            if i < matrix_full[2].shape[1]:
+                redAngle1 = round(90+math.degrees(float(matrix_full[2][0][i])), 2)
+                redAngle2 = round(90+math.degrees(float(matrix_full[2][1][i])), 2)
+                redAngle3 = round(math.degrees(
+                    float(abs(matrix_full[2][2][i]))), 2)
+
+            if i < matrix_full[3].shape[1]:
+                blueAngle1 = round(90+math.degrees(float(matrix_full[3][0][i])), 2)
+                blueAngle2 = round(90+math.degrees(float(matrix_full[3][1][i])), 2)
+                blueAngle3 = round(math.degrees(
+                    float(abs(matrix_full[3][2][i]))), 2)
+
+            SetAngle(int(allLegs[0][0]), greyAngle1)
+            SetAngle(int(allLegs[0][1]), greyAngle2)
+            SetAngle(int(allLegs[0][2]), greyAngle3)
+
+            SetAngle(int(allLegs[1][0]), blackAngle1)
+            SetAngle(int(allLegs[1][1]), blackAngle2)
+            SetAngle(int(allLegs[1][2]), blackAngle3)
+
+            SetAngle(int(allLegs[2][0]), redAngle1)
+            SetAngle(int(allLegs[2][1]), redAngle2)
+            SetAngle(int(allLegs[2][2]), redAngle3)
+
+            SetAngle(int(allLegs[3][0]), blueAngle1)
+            SetAngle(int(allLegs[3][1]), blueAngle2)
+            SetAngle(int(allLegs[3][2]), blueAngle3)
+            sleep(step_time)
     return redirect("/")
 
 
-# Run the app on the local development server
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, debug=True)
