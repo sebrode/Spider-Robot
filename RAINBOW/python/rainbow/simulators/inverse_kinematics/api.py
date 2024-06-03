@@ -3,6 +3,7 @@ import rainbow.math.quaternion as Q
 from rainbow.simulators.inverse_kinematics.types import *
 from rainbow.math.angle import *
 import numpy as np
+from scipy.optimize import minimize
 
 
 def __is_valid_euler_code(euler_code):
@@ -560,3 +561,14 @@ def compute_finite_difference_hessian(chains, skeleton, h=0.1):
             H[i, j] = __numerical_differentiation_second_derivative(
                 chains, skeleton, i, j, h)
     return H
+
+
+def solve(fun, x0, method, jac, args, bounds):
+    return minimize(
+        fun=fun,
+        x0=x0,
+        method=method,
+        jac=jac,
+        args=args,
+        bounds=bounds
+    )

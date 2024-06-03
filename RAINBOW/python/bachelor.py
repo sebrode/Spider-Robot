@@ -3,7 +3,6 @@ import rainbow.simulators.inverse_kinematics.api as IK
 import os
 import sys
 import numpy as np
-from scipy.optimize import minimize
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -54,7 +53,7 @@ def simulateSpider(positionMatrix):
     for i in range(len(positionMatrix)):
         chains[0].goal = positionMatrix[i].T
         IK.update_skeleton(skeleton)
-        result = minimize(
+        result = IK.solve(
             fun=compute_obj,
             x0=IK.get_joint_angles(skeleton),
             method='SLSQP',
@@ -82,29 +81,21 @@ greyPositionMatrix = np.array([
     V3.make(12.0, -7.0, 0.0),
     V3.make(12.0, -7.0, 0.0),
     V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
     V3.make(12.0, -7.0, 0.0)
 ])
 
 blackPositionMatrix = np.array([
-    V3.make(12.0, -7.0, 0.0),
     V3.make(12.0, -3.0, 0.0),
+    V3.make(12.0, 1.0, 0.0),
+    V3.make(6.0, 1.0, -8.0),
     V3.make(6.0, -3.0, -8.0),
-    V3.make(6.0, -7.0, -8.0),
-    V3.make(6.0, -7.0, -8.0),
-    V3.make(6.0, -7.0, -8.0),
-    V3.make(6.0, -7.0, -8.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0)
+    V3.make(6.0, -3.0, -8.0),
+    V3.make(6.0, -3.0, -8.0),
+    V3.make(6.0, -3.0, -8.0),
+    V3.make(12.0, -3.0, 0.0),
+    V3.make(12.0, -3.0, 0.0),
+    V3.make(12.0, -3.0, 0.0),
+    V3.make(12.0, -3.0, 0.0)
 
 ])
 
@@ -118,30 +109,22 @@ redPositionMatrix = np.array([
     V3.make(3.0, -7.0, -12.0),
     V3.make(1.0, -7.0, -20.0),
     V3.make(1.0, -3.0, -20.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
-    V3.make(12.0, -7.0, 0.0),
+    V3.make(10.0, -7.0, -2.0),
+    V3.make(10.0, -7.0, 0-2.0)
 ])
 
 bluePositionMatrix = np.array([
-    V3.make(12.0, -7.0, 2.0),
-    V3.make(12.0, -7.0, 2.0),
-    V3.make(12.0, -7.0, 2.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0),
-    V3.make(2.0, -7.0, 12.0)
+    V3.make(12.0, -5.0, 2.0),
+    V3.make(12.0, -5.0, 2.0),
+    V3.make(12.0, -5.0, 2.0),
+    V3.make(2.0, -5.0, 12.0),
+    V3.make(2.0, -5.0, 12.0),
+    V3.make(2.0, -5.0, 12.0),
+    V3.make(2.0, -5.0, 12.0),
+    V3.make(2.0, -5.0, 12.0),
+    V3.make(2.0, -5.0, 12.0),
+    V3.make(2.0, -5.0, 12.0),
+    V3.make(2.0, -5.0, 12.0)
 ])
 
 greyAngleMatrix, greyObjectMatrix = simulateSpider(greyPositionMatrix)
